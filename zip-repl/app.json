@@ -1,0 +1,83 @@
+{
+  "expo": {
+    "name": "Romeo & Juliet",
+    "slug": "rj-app",
+    "scheme": "rj-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#C9CFA0"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.romeojuliet.app",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "Romeo & Juliet uses your photo library so you can add profile photos.",
+        "NSCameraUsageDescription": "Romeo & Juliet may use your camera if you choose to add a new profile photo."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#C9CFA0"
+      },
+      "package": "com.romeojuliet.app",
+      "softwareKeyboardLayoutMode": "resize",
+      "versionCode": 7,
+      "permissions": [
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/icon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      [
+        "expo-secure-store",
+        {
+          "faceIDPermission": "Allow Romeo & Juliet to use Face ID to protect your session."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Romeo & Juliet uses your photo library so you can add profile photos.",
+          "cameraPermission": "Romeo & Juliet may use your camera if you choose to add a new profile photo."
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#C9CFA0"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "ffefc270-e26d-4dd0-9178-3052b553f280"
+      }
+    },
+    "owner": "kalidon"
+  }
+}

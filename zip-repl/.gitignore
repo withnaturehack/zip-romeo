@@ -1,0 +1,14 @@
+node_modules/
+.expo/
+dist/
+ios/
+android/
+*.log
+.env.local
+.DS_Store
+expo-env.d.ts
+attached_assets/
+*.download
+.cache/
+.local/
+zipFile.zip
