@@ -35,20 +35,32 @@ const RESPONSES = [
 const { width: SCREEN_W } = Dimensions.get('window');
 const ORB_SIZE = Math.min(SCREEN_W * 0.52, 210);
 
-// ─── ElevenLabs TTS — fetches audio and plays it cross-platform ──────────────
+// ─── Supabase Edge Function helpers ──────────────────────────────────────────
+// TTS/STT are proxied through Supabase Edge Functions (juliet-tts, juliet-stt)
+// so the ElevenLabs API key stays server-side and is never bundled into the
+// client app.
+async function functionUrl(name: string): Promise<string> {
+  const base = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
+  return `${base.replace(/\/$/, '')}/functions/v1/${name}`;
+}
+
+async function authHeaders(): Promise<Record<string, string>> {
+  const { supabase } = await import('@/lib/supabase');
+  const anon = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token || anon;
+  return { Authorization: `Bearer ${token}`, apikey: anon };
+}
+
+// ─── Juliet TTS — fetches audio via edge function and plays it cross-platform ─
 async function speakElevenLabs(text: string): Promise<boolean> {
-  const apiKey  = process.env.EXPO_PUBLIC_ELEVENLABS_API_KEY;
-  const voiceId = process.env.EXPO_PUBLIC_ELEVENLABS_VOICE_ID;
-  if (!apiKey || !voiceId) return false;
   try {
-    const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+    const url = await functionUrl('juliet-tts');
+    const headers = await authHeaders();
+    const res = await fetch(url, {
       method: 'POST',
-      headers: { Accept: 'audio/mpeg', 'Content-Type': 'application/json', 'xi-api-key': apiKey },
-      body: JSON.stringify({
-        text: text.replace(/\n+/g, ' '),
-        model_id: 'eleven_turbo_v2_5',
-        voice_settings: { stability: 0.48, similarity_boost: 0.82, style: 0.28, use_speaker_boost: true },
-      }),
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
     });
     if (!res.ok) return false;
 
@@ -79,9 +91,13 @@ async function speakElevenLabs(text: string): Promise<boolean> {
         { shouldPlay: true, volume: 1.0 },
       );
       return new Promise(resolve => {
+        const cleanup = () => {
+          sound.unloadAsync().catch(() => {});
+          FileSystem.deleteAsync(path, { idempotent: true }).catch(() => {});
+        };
         sound.setOnPlaybackStatusUpdate(status => {
           if (status.isLoaded && status.didJustFinish) {
-            sound.unloadAsync().catch(() => {});
+            cleanup();
             resolve(true);
           }
         });
@@ -110,10 +126,8 @@ function speakBrowserFallback(text: string): number {
   }
 }
 
-// ─── ElevenLabs STT (native only) ────────────────────────────────────────────
+// ─── Juliet STT (native only) — proxied via edge function ───────────────────
 async function transcribeWithElevenLabs(audioUri: string): Promise<string | null> {
-  const apiKey = process.env.EXPO_PUBLIC_ELEVENLABS_API_KEY;
-  if (!apiKey) return null;
   try {
     // Use base64-arraybuffer (installed) to avoid atob/Buffer — safe in Hermes
     const { decode: decodeB64 } = await import('base64-arraybuffer');
@@ -124,12 +138,10 @@ async function transcribeWithElevenLabs(audioUri: string): Promise<string | null
     const blob = new Blob([buf], { type: 'audio/m4a' });
     const form = new FormData();
     (form as any).append('file', blob, 'audio.m4a');
-    (form as any).append('model_id', 'scribe_v1');
-    const res = await fetch('https://api.elevenlabs.io/v1/speech-to-text', {
-      method: 'POST',
-      headers: { 'xi-api-key': apiKey },
-      body: form,
-    });
+
+    const url = await functionUrl('juliet-stt');
+    const headers = await authHeaders();
+    const res = await fetch(url, { method: 'POST', headers, body: form });
     if (!res.ok) return null;
     const data = await res.json();
     return (data.text as string | null) ?? null;
@@ -483,6 +495,10 @@ export default function Voice() {
       await recordingRef.current.stopAndUnloadAsync();
       const uri = recordingRef.current.getURI();
       recordingRef.current = null;
+      try {
+        const { Audio } = await import('expo-av');
+        await Audio.setAudioModeAsync({ allowsRecordingIOS: false, playsInSilentModeIOS: true });
+      } catch {}
       if (!uri) { setVoicePhase('idle'); return; }
       const transcript = await transcribeWithElevenLabs(uri);
       if (transcript?.trim()) {
