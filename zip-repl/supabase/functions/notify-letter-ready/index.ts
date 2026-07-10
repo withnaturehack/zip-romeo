@@ -7,11 +7,11 @@
 
 // deno-lint-ignore-file no-explicit-any
 // @ts-nocheck — Deno runtime, not part of the Expo/TS project graph.
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+// Uses the Deno-native `Deno.serve` (no remote std/http import needed).
 
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
 
-serve(async (req: Request) => {
+Deno.serve(async (req: Request) => {
   try {
     const { expo_push_token } = await req.json();
 
