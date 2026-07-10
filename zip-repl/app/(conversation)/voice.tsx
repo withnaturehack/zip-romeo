@@ -66,7 +66,7 @@ async function speakElevenLabs(text: string): Promise<boolean> {
       // Native path — arrayBuffer → base64 → temp file → expo-av Sound
       // Use base64-arraybuffer (installed) — no Buffer/atob needed in Hermes
       const { encode: encodeB64 } = await import('base64-arraybuffer');
-      const FileSystem = await import('expo-file-system');
+      const FileSystem = await import('expo-file-system/legacy');
       const { Audio }  = await import('expo-av');
 
       const buf  = await res.arrayBuffer();
@@ -117,7 +117,7 @@ async function transcribeWithElevenLabs(audioUri: string): Promise<string | null
   try {
     // Use base64-arraybuffer (installed) to avoid atob/Buffer — safe in Hermes
     const { decode: decodeB64 } = await import('base64-arraybuffer');
-    const FileSystem = await import('expo-file-system');
+    const FileSystem = await import('expo-file-system/legacy');
 
     const b64 = await FileSystem.readAsStringAsync(audioUri, { encoding: FileSystem.EncodingType.Base64 });
     const buf  = decodeB64(b64);
