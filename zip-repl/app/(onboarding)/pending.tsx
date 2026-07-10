@@ -191,6 +191,19 @@ export default function Pending() {
   const insets = useSafeAreaInsets();
   const { phase, loading } = useStatus(8000);
 
+  // Register for push notifications at the natural moment — right after the
+  // profile has been submitted and we're waiting on approval. Silently
+  // no-ops on web / when permission is denied.
+  useEffect(() => {
+    import('@/lib/push').then(({ registerForPushNotificationsAsync }) => {
+      registerForPushNotificationsAsync().then((result) => {
+        if (result.status === 'error') {
+          console.warn('[Pending] push registration error:', result.reason);
+        }
+      });
+    });
+  }, []);
+
   useEffect(() => {
     if (loading) return;
     if (phase === 'APPROVED' || phase === 'CHATTING') router.replace('/(conversation)/voice' as never);
