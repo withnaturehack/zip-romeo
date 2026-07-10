@@ -18,7 +18,7 @@
     ],
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.romeojuliet.app",
+      "bundleIdentifier": "com.romeojuliet1.app",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Romeo & Juliet uses your photo library so you can add profile photos.",
         "NSCameraUsageDescription": "Romeo & Juliet may use your camera if you choose to add a new profile photo.",
@@ -30,7 +30,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#C9CFA0"
       },
-      "package": "com.romeojuliet.app",
+      "package": "com.romeojuliet1.app",
       "softwareKeyboardLayoutMode": "resize",
       "versionCode": 11,
       "permissions": [
