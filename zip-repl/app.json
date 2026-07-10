@@ -21,7 +21,8 @@
       "bundleIdentifier": "com.romeojuliet.app",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Romeo & Juliet uses your photo library so you can add profile photos.",
-        "NSCameraUsageDescription": "Romeo & Juliet may use your camera if you choose to add a new profile photo."
+        "NSCameraUsageDescription": "Romeo & Juliet may use your camera if you choose to add a new profile photo.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -31,7 +32,7 @@
       },
       "package": "com.romeojuliet.app",
       "softwareKeyboardLayoutMode": "resize",
-      "versionCode": 9,
+      "versionCode": 11,
       "permissions": [
         "android.permission.READ_MEDIA_IMAGES",
         "android.permission.READ_EXTERNAL_STORAGE",
