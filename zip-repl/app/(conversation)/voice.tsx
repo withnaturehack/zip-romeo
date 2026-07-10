@@ -48,7 +48,10 @@ async function authHeaders(): Promise<Record<string, string>> {
   const { supabase } = await import('@/lib/supabase');
   const anon = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
   const { data } = await supabase.auth.getSession();
-  const token = data.session?.access_token || anon;
+  const token = data.session?.access_token;
+  if (!token) {
+    throw new Error('Not signed in — cannot use voice features.');
+  }
   return { Authorization: `Bearer ${token}`, apikey: anon };
 }
 
@@ -91,15 +94,27 @@ async function speakElevenLabs(text: string): Promise<boolean> {
         { shouldPlay: true, volume: 1.0 },
       );
       return new Promise(resolve => {
+        let settled = false;
+        const finish = (ok: boolean) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timeoutId);
+          cleanup();
+          resolve(ok);
+        };
         const cleanup = () => {
           sound.unloadAsync().catch(() => {});
           FileSystem.deleteAsync(path, { idempotent: true }).catch(() => {});
         };
+        // Guard against playback stalling (e.g. decode failure that never
+        // fires didJustFinish) so the UI never gets stuck in "speaking".
+        const timeoutId = setTimeout(() => finish(false), 30000);
         sound.setOnPlaybackStatusUpdate(status => {
-          if (status.isLoaded && status.didJustFinish) {
-            cleanup();
-            resolve(true);
+          if (!status.isLoaded) {
+            if ((status as any).error) finish(false);
+            return;
           }
+          if (status.didJustFinish) finish(true);
         });
       });
     }

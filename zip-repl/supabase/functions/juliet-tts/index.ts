@@ -17,6 +17,7 @@
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
 Deno.serve(async (req: Request) => {
@@ -25,9 +26,33 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
+    // Explicitly require a real authenticated user (not just the anon key).
+    // Platform JWT verification confirms the token is well-formed, but this
+    // checks it actually resolves to a user account.
+    const authHeader = req.headers.get('authorization') ?? '';
+    const token = authHeader.replace(/^Bearer\s+/i, '');
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
+    if (!token || !supabaseUrl || !anonKey) {
+      return new Response(JSON.stringify({ error: 'Not authenticated' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const userRes = await fetch(`${supabaseUrl}/auth/v1/user`, {
+      headers: { Authorization: `Bearer ${token}`, apikey: anonKey },
+    });
+    if (!userRes.ok) {
+      return new Response(JSON.stringify({ error: 'Not authenticated' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const apiKey = Deno.env.get('ELEVENLABS_API_KEY');
     const voiceId = Deno.env.get('ELEVENLABS_VOICE_ID');
     if (!apiKey || !voiceId) {
+      console.error('juliet-tts misconfigured: missing ELEVENLABS_API_KEY or ELEVENLABS_VOICE_ID');
       return new Response(JSON.stringify({ error: 'TTS not configured' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -54,7 +79,8 @@ Deno.serve(async (req: Request) => {
 
     if (!res.ok) {
       const errText = await res.text().catch(() => '');
-      return new Response(JSON.stringify({ error: 'ElevenLabs TTS failed', detail: errText }), {
+      console.error('ElevenLabs TTS failed:', res.status, errText);
+      return new Response(JSON.stringify({ error: 'TTS failed' }), {
         status: 502,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -66,7 +92,8 @@ Deno.serve(async (req: Request) => {
       headers: { ...corsHeaders, 'Content-Type': 'audio/mpeg' },
     });
   } catch (e) {
-    return new Response(JSON.stringify({ error: 'Unexpected error', detail: String(e) }), {
+    console.error('juliet-tts unexpected error:', e);
+    return new Response(JSON.stringify({ error: 'Unexpected error' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
