@@ -31,7 +31,7 @@
       },
       "package": "com.romeojuliet.app",
       "softwareKeyboardLayoutMode": "resize",
-      "versionCode": 7,
+      "versionCode": 8,
       "permissions": [
         "android.permission.READ_MEDIA_IMAGES",
         "android.permission.READ_EXTERNAL_STORAGE",
