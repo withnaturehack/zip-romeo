@@ -18,7 +18,7 @@
     ],
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.romeojuliet1.app",
+      "bundleIdentifier": "com.rj21.app",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Romeo & Juliet uses your photo library so you can add profile photos.",
         "NSCameraUsageDescription": "Romeo & Juliet may use your camera if you choose to add a new profile photo.",
@@ -30,14 +30,17 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#C9CFA0"
       },
-      "package": "com.romeojuliet1.app",
+      "package": "com.rj21.app",
       "softwareKeyboardLayoutMode": "resize",
-      "versionCode": 12,
+      "versionCode": 18,
       "permissions": [
-        "android.permission.READ_MEDIA_IMAGES",
-        "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO"
+      ],
+      "blockedPermissions": [
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VIDEO",
+        "android.permission.READ_EXTERNAL_STORAGE"
       ]
     },
     "web": {

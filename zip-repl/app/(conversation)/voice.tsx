@@ -4,8 +4,10 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Animated, View, Text, TextInput, Pressable, ScrollView, StyleSheet,
-  KeyboardAvoidingView, Platform, Easing, Dimensions, Alert,
+  KeyboardAvoidingView, Platform, Easing, Dimensions, Alert, Image,
 } from 'react-native';
+
+const portrait = require('@/assets/juliet-portrait.png');
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
@@ -14,9 +16,20 @@ import { useRJTheme } from '@/theme/useRJTheme';
 import { MonoLabel } from '@/components/primitives/MonoLabel';
 import { WaxSeal } from '@/components/primitives/WaxSeal';
 import { OrnamentDivider } from '@/components/primitives/OrnamentDivider';
+import { PaperNoise } from '@/components/primitives/PaperNoise';
+import Svg, { Path } from 'react-native-svg';
 
 type Msg = { from: 'juliet' | 'user'; text: string };
 type VoicePhase = 'idle' | 'listening' | 'thinking' | 'speaking';
+
+function IconMic({ color, size = 22 }: { color: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" stroke={color} strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M19 10v1a7 7 0 01-14 0v-1M12 18v4M8 22h8" stroke={color} strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
 
 const QUESTIONS = [
   "Hello. I'm glad you came.\n\nTell me — what does a perfect morning look like for you?",
@@ -144,23 +157,24 @@ function speakBrowserFallback(text: string): number {
 // ─── Juliet STT (native only) — proxied via edge function ───────────────────
 async function transcribeWithElevenLabs(audioUri: string): Promise<string | null> {
   try {
-    // Use base64-arraybuffer (installed) to avoid atob/Buffer — safe in Hermes
-    const { decode: decodeB64 } = await import('base64-arraybuffer');
-    const FileSystem = await import('expo-file-system/legacy');
-
-    const b64 = await FileSystem.readAsStringAsync(audioUri, { encoding: FileSystem.EncodingType.Base64 });
-    const buf  = decodeB64(b64);
-    const blob = new Blob([buf], { type: 'audio/m4a' });
     const form = new FormData();
-    (form as any).append('file', blob, 'audio.m4a');
+    form.append('file', {
+      uri: audioUri,
+      type: 'audio/m4a',
+      name: 'audio.m4a',
+    } as any);
 
     const url = await functionUrl('juliet-stt');
     const headers = await authHeaders();
     const res = await fetch(url, { method: 'POST', headers, body: form });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      console.error('[Voice] Transcription failed with status:', res.status);
+      return null;
+    }
     const data = await res.json();
     return (data.text as string | null) ?? null;
-  } catch {
+  } catch (e) {
+    console.error('[Voice] Exception during transcription:', e);
     return null;
   }
 }
@@ -369,6 +383,7 @@ export default function Voice() {
   const [liveText,   setLiveText]   = useState(''); // live transcript while listening
   const [showType,   setShowType]   = useState(false);
   const [typeInput,  setTypeInput]  = useState('');
+  const [started,    setStarted]    = useState(false);
 
   const headerAnim = useRef(new Animated.Value(0)).current;
   const orbAnim    = useRef(new Animated.Value(0)).current;
@@ -377,6 +392,14 @@ export default function Voice() {
   const recordingRef    = useRef<any>(null);
   // Web speech recognition ref
   const recognitionRef  = useRef<any>(null);
+
+  // Silence detection refs for native recording
+  const silenceStartRef = useRef<number | null>(null);
+  const hasSpokenRef    = useRef<boolean>(false);
+
+  // Refs to allow calling functions from callbacks without stale closures
+  const startListeningRef = useRef<() => void>(() => {});
+  const stopNativeRecordingRef = useRef<() => void>(() => {});
 
   const progress = Math.min(((step + (done ? 1 : 0)) / QUESTIONS.length) * 100, 100);
   const topPad   = Platform.OS === 'web' ? 0 : insets.top;
@@ -396,55 +419,6 @@ export default function Voice() {
       setVoicePhase('idle');
     }
   }, []);
-
-  // ── Mount: animate in + speak first question ──────────────────────────────
-  useEffect(() => {
-    Animated.sequence([
-      Animated.timing(headerAnim, { toValue: 1, duration: 700, easing: Easing.out(Easing.cubic), useNativeDriver: false }),
-      Animated.timing(orbAnim,    { toValue: 1, duration: 600, easing: Easing.out(Easing.cubic), useNativeDriver: false }),
-    ]).start();
-
-    const t = setTimeout(() => {
-      const firstMsg = QUESTIONS[0];
-      setMessages([{ from: 'juliet', text: firstMsg }]);
-      speakText(firstMsg);
-    }, 900);
-    return () => clearTimeout(t);
-  }, []);
-
-  // ── Web speech recognition setup ─────────────────────────────────────────
-  useEffect(() => {
-    if (Platform.OS !== 'web') return;
-    const SRC = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SRC) return;
-    const rec = new SRC();
-    rec.continuous = true; rec.interimResults = true; rec.lang = 'en-US';
-    rec.onresult = (e: any) => {
-      let interim = '', final = '';
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        const t = e.results[i][0]?.transcript ?? '';
-        if (e.results[i].isFinal) final += t;
-        else interim += t;
-      }
-      setLiveText(final || interim);
-      if (final) {
-        // Stop immediately so Juliet's TTS voice isn't picked up as input
-        try { rec.stop(); } catch {}
-        setLiveText('');
-        setVoicePhase('thinking');
-        handleAnswerRef.current(final.trim());
-      }
-    };
-    rec.onerror = () => { setVoicePhase('idle'); setLiveText(''); };
-    rec.onend   = () => { setVoicePhase(prev => prev === 'listening' ? 'idle' : prev); };
-    recognitionRef.current = rec;
-    return () => { try { rec.stop(); } catch {} };
-  }, []);
-
-  // ── Scroll to bottom on new messages ─────────────────────────────────────
-  useEffect(() => {
-    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 150);
-  }, [messages]);
 
   // ── Handle an answer (from voice or text) ────────────────────────────────
   const handleAnswer = useCallback(async (text: string) => {
@@ -476,6 +450,8 @@ export default function Voice() {
       const reply = `${RESPONSES[Math.min(nextStep - 1, RESPONSES.length - 1)]} ${QUESTIONS[nextStep]}`;
       setMessages(m => [...m, { from: 'juliet', text: reply }]);
       await speakText(reply);
+      // Auto-start listening after Juliet finishes speaking the next question
+      startListeningRef.current();
     }, delay);
   }, [answers, step, done, speakText]);
 
@@ -490,8 +466,39 @@ export default function Voice() {
       const { Audio } = await import('expo-av');
       await Audio.requestPermissionsAsync();
       await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
+      
+      silenceStartRef.current = null;
+      hasSpokenRef.current = false;
+
       const { recording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY,
+        {
+          ...Audio.RecordingOptionsPresets.HIGH_QUALITY,
+          isMeteringEnabled: true,
+        } as any,
+        (status) => {
+          if (!status.isRecording) return;
+          const metering = status.metering;
+          if (metering !== undefined) {
+            // expo-av metering is typically from -160 to 0. Silence is usually <-35.
+            if (metering > -30) {
+              hasSpokenRef.current = true;
+              silenceStartRef.current = null;
+            } else {
+              if (silenceStartRef.current === null) {
+                silenceStartRef.current = Date.now();
+              } else if (Date.now() - silenceStartRef.current > 1800) {
+                // 1.8 seconds of silence after speaking
+                if (hasSpokenRef.current) {
+                  stopNativeRecordingRef.current();
+                } else if (Date.now() - silenceStartRef.current > 6000) {
+                  // 6 seconds of total silence without speaking
+                  stopNativeRecordingRef.current();
+                }
+              }
+            }
+          }
+        },
+        100
       );
       recordingRef.current = recording;
       setVoicePhase('listening');
@@ -527,6 +534,29 @@ export default function Voice() {
     }
   }, [handleAnswer]);
 
+  // ── Unified start listening handler ─────────────────────────────────────────
+  const startListening = useCallback(async () => {
+    if (done) return;
+    if (Platform.OS === 'web') {
+      const rec = recognitionRef.current;
+      if (rec) {
+        setVoicePhase('listening');
+        try { rec.start(); } catch {}
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+      } else {
+        setShowType(true);
+      }
+    } else {
+      await startNativeRecording();
+    }
+  }, [done, startNativeRecording]);
+
+  // Update refs to prevent closure issues in async loops
+  useEffect(() => {
+    startListeningRef.current = startListening;
+    stopNativeRecordingRef.current = stopNativeRecording;
+  }, [startListening, stopNativeRecording]);
+
   // ── Toggle orb tap ───────────────────────────────────────────────────────
   const handleOrbPress = useCallback(() => {
     if (voicePhase === 'speaking' || voicePhase === 'thinking' || done) return;
@@ -534,25 +564,22 @@ export default function Voice() {
     if (Platform.OS === 'web') {
       const rec = recognitionRef.current;
       if (!rec) {
-        // No speech recognition — show type mode instead
         setShowType(true); return;
       }
       if (voicePhase === 'listening') {
         rec.stop?.();
         setVoicePhase('idle');
       } else {
-        setVoicePhase('listening');
-        try { rec.start(); } catch { /* already started */ }
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+        startListening();
       }
     } else {
       if (voicePhase === 'listening') {
         stopNativeRecording();
       } else {
-        startNativeRecording();
+        startListening();
       }
     }
-  }, [voicePhase, done, startNativeRecording, stopNativeRecording]);
+  }, [voicePhase, done, startListening, stopNativeRecording]);
 
   // ── Send from text input ─────────────────────────────────────────────────
   const sendTyped = useCallback(() => {
@@ -571,6 +598,56 @@ export default function Voice() {
     router.replace('/(conversation)/questionnaire' as never);
   };
 
+  // ── Start conversation on intro Speak click ──────────────────────────────
+  const startConversation = useCallback(() => {
+    Haptics.selectionAsync().catch(() => {});
+    setStarted(true);
+    Animated.sequence([
+      Animated.timing(headerAnim, { toValue: 1, duration: 700, easing: Easing.out(Easing.cubic), useNativeDriver: false }),
+      Animated.timing(orbAnim,    { toValue: 1, duration: 600, easing: Easing.out(Easing.cubic), useNativeDriver: false }),
+    ]).start();
+
+    const t = setTimeout(async () => {
+      const firstMsg = QUESTIONS[0];
+      setMessages([{ from: 'juliet', text: firstMsg }]);
+      await speakText(firstMsg);
+      startListeningRef.current();
+    }, 500);
+  }, [speakText]);
+
+  // ── Web speech recognition setup ─────────────────────────────────────────
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const SRC = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SRC) return;
+    const rec = new SRC();
+    rec.continuous = true; rec.interimResults = true; rec.lang = 'en-US';
+    rec.onresult = (e: any) => {
+      let interim = '', final = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const t = e.results[i][0]?.transcript ?? '';
+        if (e.results[i].isFinal) final += t;
+        else interim += t;
+      }
+      setLiveText(final || interim);
+      if (final) {
+        try { rec.stop(); } catch {}
+        setLiveText('');
+        setVoicePhase('thinking');
+        handleAnswerRef.current(final.trim());
+      }
+    };
+    rec.onerror = () => { setVoicePhase('idle'); setLiveText(''); };
+    rec.onend   = () => { setVoicePhase(prev => prev === 'listening' ? 'idle' : prev); };
+    recognitionRef.current = rec;
+    return () => { try { rec.stop(); } catch {} };
+  }, []);
+
+  // ── Scroll to bottom on new messages ─────────────────────────────────────
+  useEffect(() => {
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 150);
+  }, [messages]);
+
   const statusLabel = done            ? 'Our conversation is complete'
     : voicePhase === 'listening'      ? 'Listening…'
     : voicePhase === 'thinking'       ? 'Thinking…'
@@ -578,6 +655,109 @@ export default function Voice() {
     : 'Tap to speak';
 
   const canTap = voicePhase === 'idle' || voicePhase === 'listening';
+
+  if (!started) {
+    return (
+      <View style={{ flex: 1, backgroundColor: c.bg }}>
+        <PaperNoise />
+        {/* Top bar with back to home */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', paddingBottom: 14, paddingTop: insets.top + 14, paddingHorizontal: d.pad }}>
+          <Pressable
+            onPress={() => router.replace('/(main)/home' as never)}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+          >
+            <Text style={{ fontFamily: f.mono, fontSize: 13, color: c.inkMuted, lineHeight: 16 }}>←</Text>
+            <MonoLabel size={6.5} color={c.inkMuted as string}>Home</MonoLabel>
+          </Pressable>
+        </View>
+
+        <ScrollView
+          contentContainerStyle={{ paddingHorizontal: d.pad, paddingBottom: insets.bottom + 30, alignItems: 'center' }}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Section label */}
+          <MonoLabel size={7} color={c.gold as string} style={{ marginTop: 12, letterSpacing: 2 }}>
+            A CONVERSATION
+          </MonoLabel>
+
+          {/* Title */}
+          <Text style={{
+            fontFamily: f.serifI, fontSize: 32, color: c.ink,
+            textAlign: 'center', marginTop: 8, marginBottom: 24,
+            lineHeight: 38, maxWidth: 300,
+          }}>
+            Juliet would like to know you.
+          </Text>
+
+          {/* Polaroid Portrait */}
+          <View style={[styles.polaroidFrame, { backgroundColor: c.bgCard, borderColor: c.ruleSoft }]}>
+            <View style={{ width: '100%', height: 160, backgroundColor: '#0c0c08', overflow: 'hidden' }}>
+              <Image
+                source={portrait}
+                style={{ width: '100%', height: '100%', opacity: 0.76 }}
+                resizeMode="cover"
+              />
+            </View>
+            <View style={{ paddingVertical: 12, alignItems: 'center' }}>
+              <Text style={{ fontFamily: f.serifI, fontSize: 16, color: c.ink }}>Juliet</Text>
+              <Text style={{ fontFamily: f.mono, fontSize: 7, color: c.inkMuted, marginTop: 2, letterSpacing: 0.8, textTransform: 'uppercase' }}>
+                Plate 1. Juliet, In Repose
+              </Text>
+            </View>
+          </View>
+
+          {/* Parchment letter card */}
+          <View style={[styles.introCard, { backgroundColor: '#FBF2E3', borderColor: 'rgba(78,91,69,0.2)' }]}>
+            <View style={{ position: 'relative', zIndex: 1, alignItems: 'center' }}>
+              <Text style={{ fontFamily: f.bodyI, fontSize: 13, color: c.inkMuted, alignSelf: 'flex-start', marginBottom: 14 }}>
+                from my desk, this morning
+              </Text>
+              <Text style={{ fontFamily: f.serifI, fontSize: 32, color: c.ink, alignSelf: 'flex-start', marginBottom: 16 }}>
+                Dear friend,
+              </Text>
+              <Text style={{ fontFamily: f.serif, fontSize: 17, color: c.ink, lineHeight: 26, textAlign: 'left', marginBottom: 28 }}>
+                Press speak. I have only a few questions, and I would like to hear your answers in your own words.
+              </Text>
+
+              {/* SPEAK Circle Button */}
+              <Pressable
+                onPress={startConversation}
+                style={({ pressed }) => [
+                  styles.speakBtnCircle,
+                  {
+                    backgroundColor: pressed ? c.bgCard : c.bg,
+                    borderColor: c.ruleSoft,
+                  }
+                ]}
+              >
+                <IconMic color={c.forest} size={24} />
+              </Pressable>
+              <Text style={{ fontFamily: f.mono, fontSize: 8.5, color: c.inkSoft, letterSpacing: 1.5, textTransform: 'uppercase', marginTop: 10, marginBottom: 10 }}>
+                SPEAK
+              </Text>
+            </View>
+          </View>
+
+          {/* Guidelines notes */}
+          <View style={{ width: '100%', marginTop: 28, borderTopWidth: 1, borderTopColor: c.ruleSoft, paddingTop: 20, gap: 18 }}>
+            {[
+              { num: 'i.', title: 'You speak', desc: 'Juliet asks questions. Speak naturally. She listens and remembers.' },
+              { num: 'ii.', title: 'Romeo reads', desc: "When you're done, Juliet tells Romeo what she learned." },
+            ].map(item => (
+              <View key={item.num} style={{ flexDirection: 'row', gap: 14 }}>
+                <Text style={{ fontFamily: f.serifI, fontSize: 18, color: c.gold, width: 20 }}>{item.num}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontFamily: f.serifI, fontSize: 16, color: c.ink, marginBottom: 2 }}>{item.title}</Text>
+                  <Text style={{ fontFamily: f.body, fontSize: 13, color: c.inkSoft, lineHeight: 18 }}>{item.desc}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+
+        </ScrollView>
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView
@@ -786,5 +966,34 @@ const styles = StyleSheet.create({
   sendBtn: {
     paddingHorizontal: 18, paddingVertical: 14,
     alignItems: 'center', justifyContent: 'center', borderRadius: 2,
+  },
+  polaroidFrame: {
+    width: 190,
+    borderWidth: 1,
+    padding: 10,
+    paddingBottom: 2,
+    shadowColor: '#000', shadowOpacity: 0.08, shadowOffset: { width: 0, height: 6 }, shadowRadius: 16,
+    elevation: 3,
+    marginBottom: 28,
+  },
+  introCard: {
+    width: '100%',
+    borderWidth: 1,
+    paddingHorizontal: 22,
+    paddingTop: 24,
+    paddingBottom: 20,
+    shadowColor: '#000', shadowOpacity: 0.05, shadowOffset: { width: 0, height: 4 }, shadowRadius: 12,
+    elevation: 2,
+    position: 'relative',
+  },
+  speakBtnCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000', shadowOpacity: 0.04, shadowOffset: { width: 0, height: 2 }, shadowRadius: 6,
+    elevation: 1,
   },
 });

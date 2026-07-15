@@ -121,6 +121,33 @@ export default function Chat() {
     return () => clearTimeout(timer);
   }, [messages.length]);
 
+  if (!activeMatch) {
+    const topPad = Platform.OS === 'web' ? 60 : insets.top;
+    return (
+      <View style={{ flex: 1, backgroundColor: c.bg }}>
+        <PaperNoise />
+        <View style={[styles.header, {
+          paddingTop: topPad + 10,
+          paddingHorizontal: d.pad,
+          borderBottomColor: c.ruleSoft,
+          backgroundColor: c.bg,
+          justifyContent: 'center',
+        }]}>
+          <Text style={{ fontFamily: f.serifI, fontSize: 22, color: c.ink, lineHeight: 26 }}>Chats</Text>
+        </View>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40, gap: 14 }}>
+          <WaxSeal size={54} pulse />
+          <Text style={{ fontFamily: f.serifI, fontSize: 20, color: c.inkMuted, textAlign: 'center', lineHeight: 28 }}>
+            No active conversations yet.
+          </Text>
+          <Text style={{ fontFamily: f.bodyI, fontSize: 14, color: c.inkMuted, textAlign: 'center', opacity: 0.7, lineHeight: 21 }}>
+            Once Romeo introduces you to a match, your conversation will open here.
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
   const send = useCallback(() => {
     const text = input.trim();
     if (!text) return;
@@ -200,7 +227,7 @@ export default function Chat() {
         <TextInput
           value={input}
           onChangeText={setInput}
-          placeholder={`Write to James\u2026`}
+          placeholder={`Write to ${matchName}\u2026`}
           placeholderTextColor={c.inkMuted as string}
           multiline
           returnKeyType="default"

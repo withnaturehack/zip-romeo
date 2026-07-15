@@ -47,14 +47,24 @@ export default function Referrals() {
   // Live updates: re-fetch the referrals list whenever a new profile row is
   // inserted or changes (e.g. someone joins using this member's code).
   useEffect(() => {
+    if (!code) return;
     const channel = supabase
       .channel('my-referrals')
-      .on('postgres_changes' as never, { event: '*', schema: 'public', table: 'profiles' }, () => {
-        getMyReferrals().then(res => setReferrals(res.referrals));
-      })
+      .on(
+        'postgres_changes' as never,
+        {
+          event: '*',
+          schema: 'public',
+          table: 'profiles',
+          filter: `referral_code=eq.${code}`,
+        },
+        () => {
+          getMyReferrals().then(res => setReferrals(res.referrals));
+        }
+      )
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, []);
+  }, [code]);
 
   const onShare = async () => {
     if (!code) return;

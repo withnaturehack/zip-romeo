@@ -14,8 +14,13 @@ export type UploadResult = { ok: true; url: string } | { ok: false; error: strin
 // fine there. expo-file-system is native-only so we can't share the
 // native path; the platforms diverge cleanly.
 export async function pickAndUploadPhoto(userId: string, slot: number): Promise<UploadResult> {
-  const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-  if (!perm.granted) return { ok: false, error: 'Photo library access denied' };
+  // On iOS, we request photo library permissions.
+  // On Android, we bypass this because we use the permissionless system photo picker
+  // and do not declare/request restricted media permissions in the manifest.
+  if (Platform.OS === 'ios') {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) return { ok: false, error: 'Photo library access denied' };
+  }
 
   const result = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: ImagePicker.MediaTypeOptions.Images,

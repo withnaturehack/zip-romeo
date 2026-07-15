@@ -93,8 +93,14 @@ export default function Waiting() {
 
       {/* Top bar */}
       <View style={[styles.topBar, { paddingTop: insets.top + 14, paddingHorizontal: d.pad, borderBottomColor: c.ruleSoft }]}>
+        <Pressable
+          onPress={() => router.replace('/(main)/home' as never)}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+        >
+          <Text style={{ fontFamily: f.mono, fontSize: 12, color: c.inkMuted, lineHeight: 14 }}>←</Text>
+          <MonoLabel size={6.5} color={c.inkMuted as string}>Home</MonoLabel>
+        </Pressable>
         <MonoLabel size={7}>Romeo is reading</MonoLabel>
-        <MonoLabel size={7} color={c.inkMuted as string}>Please wait</MonoLabel>
       </View>
 
       {/* Center content */}
@@ -156,6 +162,26 @@ export default function Waiting() {
             </Pressable>
           </Animated.View>
         )}
+
+        <Pressable
+          onPress={async () => {
+            try {
+              const { supabase } = await import('@/lib/supabase');
+              const { data: { user } } = await supabase.auth.getUser();
+              if (user) {
+                await supabase.from('profiles').update({ phase: 'LETTER_READY' }).eq('user_id', user.id);
+              }
+            } catch (e) {
+              console.error(e);
+            }
+            router.replace('/(letter)/envelope' as never);
+          }}
+          style={{ marginTop: 28, padding: 8 }}
+        >
+          <Text style={{ fontFamily: f.mono, fontSize: 10, color: c.gold, textDecorationLine: 'underline', opacity: 0.6 }}>
+            Skip to Letter (Testing)
+          </Text>
+        </Pressable>
       </Animated.View>
     </View>
   );

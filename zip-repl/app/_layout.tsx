@@ -16,10 +16,10 @@ import {
 } from '@expo-google-fonts/eb-garamond';
 import { JetBrainsMono_400Regular } from '@expo-google-fonts/jetbrains-mono';
 import { Caveat_400Regular } from '@expo-google-fonts/caveat';
-import { View, ActivityIndicator, Text } from 'react-native';
+import { View, ActivityIndicator, Text, Platform } from 'react-native';
 import { ThemeProvider } from '@/theme/ThemeProvider';
 import { PreferencesProvider, usePreferences } from '@/theme/PreferencesProvider';
-import { RJ_LIGHT, RJ_DARK } from '@/theme/tokens';
+import { RJ_LIGHT, RJ_DARK, RJ_FONTS } from '@/theme/tokens';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { useEffect } from 'react';
 
@@ -52,21 +52,22 @@ function AppShell() {
     );
   }
 
-  if (fontError) {
-    return (
-      <View style={{ flex: 1, backgroundColor: RJ_LIGHT.bg, alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-        <Text style={{ color: '#c00', fontWeight: 'bold', fontSize: 14 }}>Font Load Error</Text>
-        <Text style={{ color: '#666', fontSize: 12, marginTop: 8, textAlign: 'center' }}>
-          {String(fontError)}
-        </Text>
-      </View>
-    );
-  }
+  const FALLBACK_FONTS = {
+    serif: Platform.OS === 'web' ? 'Georgia, serif' : 'Georgia',
+    serifI: Platform.OS === 'web' ? 'Georgia, serif' : 'Georgia',
+    serifM: Platform.OS === 'web' ? 'Georgia, serif' : 'Georgia',
+    serifSB: Platform.OS === 'web' ? 'Georgia, serif' : 'Georgia',
+    body: Platform.OS === 'web' ? 'Georgia, serif' : 'Georgia',
+    bodyI: Platform.OS === 'web' ? 'Georgia, serif' : 'Georgia',
+    mono: Platform.OS === 'web' ? 'monospace' : 'Courier',
+    script: Platform.OS === 'web' ? 'cursive, Georgia, serif' : 'Georgia',
+  };
 
   const palette = prefs.dark ? RJ_DARK : RJ_LIGHT;
+  const fonts = fontError ? FALLBACK_FONTS : RJ_FONTS;
 
   return (
-    <ThemeProvider dark={prefs.dark} density={prefs.density}>
+    <ThemeProvider dark={prefs.dark} density={prefs.density} fonts={fonts}>
       <StatusBar style={prefs.dark ? 'light' : 'dark'} />
       <Stack
         screenOptions={{

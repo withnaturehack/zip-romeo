@@ -24,8 +24,8 @@ export default function Index() {
     case 'PENDING_APPROVAL': return <Redirect href="/(onboarding)/pending" />;
     case 'APPROVED':
     case 'CHATTING': return <Redirect href="/(conversation)/voice" />;
-    case 'QUESTIONNAIRE_DONE':
-    case 'WAITING': return <Redirect href="/(conversation)/questionnaire" />;
+    case 'QUESTIONNAIRE_DONE': return <Redirect href="/(conversation)/questionnaire" />;
+    case 'WAITING': return <Redirect href="/(conversation)/waiting" />;
     case 'LETTER_READY': return <Redirect href="/(letter)/envelope" />;
     case 'CHAT':
     case 'COMPLETE': return <Redirect href="/(main)/home" />;

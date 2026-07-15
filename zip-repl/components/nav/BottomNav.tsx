@@ -7,6 +7,7 @@ import Svg, { Path, Circle } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 import { useRJTheme } from '@/theme/useRJTheme';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useStatus } from '@/lib/hooks';
 
 export const NAV_H = 58;
 
@@ -36,20 +37,10 @@ function IconEnvelope({ color, size = 22 }: { color: string; size?: number }) {
     </Svg>
   );
 }
-function IconJournal({ color, size = 22 }: { color: string; size?: number }) {
+function IconChats({ color, size = 22 }: { color: string; size?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M4 3h14a1 1 0 011 1v16a1 1 0 01-1 1H4" stroke={color} strokeWidth={1.4} strokeLinejoin="round" />
-      <Path d="M4 3a2 2 0 000 4m0-4a2 2 0 010 4m0 0v14" stroke={color} strokeWidth={1.4} />
-      <Path d="M8 8h7M8 12h7M8 16h4" stroke={color} strokeWidth={1.2} strokeLinecap="round" />
-    </Svg>
-  );
-}
-function IconProfile({ color, size = 22 }: { color: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Circle cx="12" cy="8" r="4" stroke={color} strokeWidth={1.4} />
-      <Path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke={color} strokeWidth={1.4} strokeLinecap="round" />
+      <Path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z" stroke={color} strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round" />
     </Svg>
   );
 }
@@ -65,10 +56,8 @@ type Tab = {
 
 const TABS: Tab[] = [
   { key: 'home',    label: 'Home',    route: '/(main)/home',    icon: (c, s) => <IconHome    color={c} size={s} />, matchPaths: ['/(main)/home', '/home'] },
-  { key: 'juliet',  label: 'Juliet',  route: '/(conversation)/voice',  icon: (c, s) => <IconJuliet  color={c} size={s} />, matchPaths: ['/(conversation)/voice', '/voice'] },
-  { key: 'letters', label: 'Letters', route: '/(letter)/letter', icon: (c, s) => <IconEnvelope color={c} size={s} />, matchPaths: ['/(letter)/', '/letter', '/envelope'] },
-  { key: 'journal', label: 'Journal', route: '/(main)/journal',  icon: (c, s) => <IconJournal color={c} size={s} />, matchPaths: ['/(main)/journal', '/journal'] },
-  { key: 'profile', label: 'Profile', route: '/(main)/profile',  icon: (c, s) => <IconProfile color={c} size={s} />, matchPaths: ['/(main)/profile', '/profile'] },
+  { key: 'letters', label: 'Updates', route: '/(letter)/letter', icon: (c, s) => <IconEnvelope color={c} size={s} />, matchPaths: ['/(letter)/', '/letter', '/envelope'] },
+  { key: 'chats',   label: 'Chats',   route: '/(letter)/chat',   icon: (c, s) => <IconChats    color={c} size={s} />, matchPaths: ['/(letter)/chat', '/chat'] },
 ];
 
 // ─── Single tab button ────────────────────────────────────────────────────────
@@ -128,6 +117,7 @@ export function BottomNav() {
   const insets  = useSafeAreaInsets();
   const path    = usePathname();
   const slideUp = useRef(new Animated.Value(80)).current;
+  const { phase } = useStatus(15000);
 
   useEffect(() => {
     Animated.spring(slideUp, {
@@ -146,7 +136,15 @@ export function BottomNav() {
   const activeKey = getActiveKey();
 
   const navigate = (tab: Tab) => {
-    router.push(tab.route as never);
+    if (tab.key === 'letters') {
+      if (phase === 'LETTER_READY') {
+        router.push('/(letter)/envelope' as never);
+      } else {
+        router.push('/(letter)/letter' as never);
+      }
+    } else {
+      router.push(tab.route as never);
+    }
   };
 
   return (

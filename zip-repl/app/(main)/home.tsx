@@ -161,7 +161,7 @@ function JourneyTracker({ phase, hasMatches, hasChat }: {
   }, [current]);
 
   return (
-    <View style={{ paddingHorizontal: 20, paddingVertical: 22, backgroundColor: c.bgCard, borderBottomWidth: 1, borderBottomColor: c.ruleSoft }}>
+    <View style={{ paddingHorizontal: 20, paddingVertical: 20, backgroundColor: c.bg, borderBottomWidth: 1, borderBottomColor: c.ruleSoft }}>
       <Text style={{ fontFamily: f.mono, fontSize: 7, letterSpacing: 2.2, color: c.inkMuted, textTransform: 'uppercase', marginBottom: 18 }}>
         Your journey
       </Text>
@@ -256,64 +256,43 @@ export default function Home() {
 
   return (
     <ScreenScroll>
-      {/* ── Dark cinematic hero ── */}
-      <View style={[styles.heroWrap, { height: HERO_H }]}>
-        <Image
-          source={portrait}
-          style={[StyleSheet.absoluteFillObject, { opacity: 0.55 }]}
-          resizeMode="cover"
-        />
-        <LinearGradient
-          colors={['rgba(8,10,4,0.72)', 'rgba(8,10,4,0.10)']}
-          style={[StyleSheet.absoluteFillObject, { height: '60%' }]}
-          start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
-        />
-        <LinearGradient
-          colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.0)', 'rgba(12,14,7,0.95)']}
-          style={[StyleSheet.absoluteFillObject, { top: '35%' }]}
-          start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
-        />
-        <LinearGradient
-          colors={['rgba(0,0,0,0.28)', 'rgba(0,0,0,0)']}
-          style={[StyleSheet.absoluteFillObject, { width: '32%' }]}
-          start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-        />
-
+      {/* ── Unified Parchment Header ── */}
+      <View style={{ paddingTop: topPad + 16, paddingHorizontal: 20, paddingBottom: 16, backgroundColor: c.bg }}>
         {/* Top bar */}
-        <FadeIn fromY={-12} duration={440} style={[styles.heroTop, { paddingTop: topPad + 14 }]}>
+        <FadeIn fromY={-12} duration={440} style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontFamily: f.serifI, fontSize: 22, color: '#F3ECDA', letterSpacing: 0.2, lineHeight: 26 }}>
+            <Text style={{ fontFamily: f.serifI, fontSize: 24, color: c.ink, letterSpacing: 0.2, lineHeight: 28 }}>
               Romeo &amp; Juliet
             </Text>
             <Text style={{
-              fontFamily: f.mono, fontSize: 7, color: 'rgba(243,236,218,0.45)',
+              fontFamily: f.mono, fontSize: 7.5, color: c.inkMuted,
               letterSpacing: 2.2, textTransform: 'uppercase', marginTop: 4,
             }}>
               {dayName} · {month}
             </Text>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <PostmarkStamp size={40} rotate={-7} />
+            <PostmarkStamp size={38} rotate={-7} />
             <IconBtn
               onPress={() => router.push('/(main)/settings' as never)}
               testID="home-settings-btn"
             >
-              <IconCog color="rgba(243,236,218,0.70)" />
+              <IconCog color={c.inkMuted as string} />
             </IconBtn>
           </View>
         </FadeIn>
 
-        {/* Greeting — bottom of hero */}
-        <FadeIn delay={220} duration={600} fromY={10} style={styles.heroGreeting}>
+        {/* Greeting */}
+        <FadeIn delay={220} duration={600} fromY={10} style={{ marginTop: 24 }}>
           <Text style={{
-            fontFamily: f.mono, fontSize: 7, color: 'rgba(243,236,218,0.42)',
+            fontFamily: f.mono, fontSize: 7.5, color: c.inkMuted,
             letterSpacing: 2.4, textTransform: 'uppercase', marginBottom: 6,
           }}>
             {greeting()}
           </Text>
           <Text style={{
-            fontFamily: f.serifI, fontSize: 38, color: '#F3ECDA',
-            lineHeight: 42, letterSpacing: 0.3,
+            fontFamily: f.serifI, fontSize: 36, color: c.ink,
+            lineHeight: 40, letterSpacing: 0.3,
           }}>
             {profile?.first_name ?? 'there'}.
           </Text>
@@ -526,47 +505,7 @@ export default function Home() {
             </FadeIn>
           )}
 
-          {/* ── Your matchmaker ── */}
-          <FadeIn delay={360} duration={500} fromY={16} style={{ marginBottom: 28 }}>
-            <SectionLabel>Your matchmaker</SectionLabel>
-            <PressCard
-              testID="home-speak-juliet"
-              onPress={openJuliet}
-              style={[styles.julietCard, {
-                borderColor: c.ruleSoft,
-                backgroundColor: c.bgCard,
-              }]}
-            >
-              <View style={[styles.julietImageWrap, { backgroundColor: '#0c0c08', borderColor: c.rule }]}>
-                <Image
-                  source={julietFaded}
-                  style={{ width: '100%', height: '100%', opacity: 0.7 }}
-                  resizeMode="cover"
-                />
-                <LinearGradient
-                  colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.5)']}
-                  style={StyleSheet.absoluteFillObject}
-                  start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
-                />
-                <Text style={[styles.julietLabel, { fontFamily: f.serifI }]}>Juliet</Text>
-              </View>
-              <View style={{ flex: 1, paddingVertical: 2 }}>
-                <Text style={{ fontFamily: f.serifI, fontSize: 22, color: c.ink, lineHeight: 26 }}>
-                  Speak to Juliet.
-                </Text>
-                <Text style={{
-                  fontFamily: f.bodyI, fontSize: 13, color: c.inkMuted,
-                  marginTop: 5, lineHeight: 20,
-                }}>
-                  She remembers what you said.{'\n'}She is waiting for you.
-                </Text>
-                <Row gap={6} align="center" style={{ marginTop: 12 }}>
-                  <MonoLabel size={8} color={c.forest}>Begin</MonoLabel>
-                  <IconArrow color={c.forest} size={12} />
-                </Row>
-              </View>
-            </PressCard>
-          </FadeIn>
+
 
           {/* ── Journal shortcut ── */}
           <FadeIn delay={400} duration={500} fromY={12} style={{ marginBottom: 28 }}>

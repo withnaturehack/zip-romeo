@@ -12,3 +12,7 @@ attached_assets/
 .cache/
 .local/
 zipFile.zip
+scratch/
+.config/
+
+

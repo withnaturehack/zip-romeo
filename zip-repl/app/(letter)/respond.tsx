@@ -27,6 +27,7 @@ export default function Respond() {
       if (user) {
         await supabase.from('profiles').update({
           questionnaire_answers: { last_response: { choice, note, ts: new Date().toISOString() } },
+          phase: 'COMPLETE',
         }).eq('user_id', user.id);
       }
       setBusy(false);

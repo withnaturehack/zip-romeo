@@ -27,7 +27,11 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "npm_config_legacy_peer_deps": "true"
+        "npm_config_legacy_peer_deps": "true",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://cfbomqmewecnipfwqgjs.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNmYm9tcW1ld2VjbmlwZndxZ2pzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxNDYyNDcsImV4cCI6MjA5MjcyMjI0N30.8OlQ9j7MbWh4bI-okZfi9OWrrO2FXxb2N73WuECva04",
+        "EXPO_PUBLIC_ELEVENLABS_AGENT_ID": "agent_1301kjdtzaf1ej8rccjms7v3af48",
+        "EXPO_PUBLIC_ELEVENLABS_VOICE_ID": "EST9Ui6982FZPSi7gCHi"
       }
     }
   },

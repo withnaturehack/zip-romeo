@@ -152,6 +152,13 @@ export default function PrivacyPolicy() {
             </Section>
           </FadeSlide>
 
+          <FadeSlide delay={440}>
+            <Section title="Child Safety & CSAE Policy">
+              Romeo &amp; Juliet has a zero-tolerance policy regarding Child Sexual Abuse Material (CSAM) and Child Sexual Abuse and Exploitation (CSAE). We strictly prohibit any user from uploading, sharing, or transmitting any content that exploits or abuses children.{'\n\n'}
+              We provide in-app reporting tools for users to immediately report any child safety concerns. Upon receiving any report or discovering CSAM/CSAE, we will immediately terminate the offending account, preserve necessary evidence, and report the violation and associated details to regional and national authorities, including the National Center for Missing &amp; Exploited Children (NCMEC) and relevant law enforcement.
+            </Section>
+          </FadeSlide>
+
           <FadeSlide delay={460}>
             <Section title="Changes to this policy">
               If we make material changes to this Privacy Policy, we will notify you inside the app before the changes take effect. Continued use of the app after that date constitutes your acceptance of the updated policy.

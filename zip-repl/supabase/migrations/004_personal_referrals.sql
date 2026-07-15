@@ -5,13 +5,27 @@ ALTER TABLE profiles ADD COLUMN IF NOT EXISTS own_referral_code text UNIQUE;
 
 -- Lets a signed-in user see the (limited) profile rows of people who joined using
 -- their personal code — needed for the "Referrals" screen list.
+CREATE OR REPLACE FUNCTION public.get_my_own_referral_code()
+RETURNS text
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+  SELECT own_referral_code FROM profiles WHERE user_id = auth.uid();
+$$;
+
+REVOKE ALL ON FUNCTION public.get_my_own_referral_code() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_my_own_referral_code() TO authenticated;
+
 DROP POLICY IF EXISTS "profiles_referred_select" ON profiles;
 CREATE POLICY "profiles_referred_select"
   ON profiles FOR SELECT
   TO authenticated
   USING (
-    referral_code = (SELECT p.own_referral_code FROM profiles p WHERE p.user_id = auth.uid())
+    referral_code = public.get_my_own_referral_code()
   );
+
 
 -- Generates (if missing) and returns the caller's personal referral code, also
 -- registering it in referral_codes so it works at sign-up like any other code.
