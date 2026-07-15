@@ -116,6 +116,16 @@ export default function Chat() {
     ? ARCHETYPES[matchArchetypeKey as keyof typeof ARCHETYPES]
     : ARCHETYPES.slow;
 
+  const send = useCallback(() => {
+    const text = input.trim();
+    if (!text) return;
+    setInput('');
+    const ts = new Date().toISOString();
+    setMessages(m => [...m, { id: `${ts}-${m.length}`, sender: 'me', text, ts }]);
+    setTyping(true);
+    setTimeout(() => setTyping(false), 2600 + Math.random() * 400);
+  }, [input]);
+
   useEffect(() => {
     const timer = setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
     return () => clearTimeout(timer);
@@ -147,16 +157,6 @@ export default function Chat() {
       </View>
     );
   }
-
-  const send = useCallback(() => {
-    const text = input.trim();
-    if (!text) return;
-    setInput('');
-    const ts = new Date().toISOString();
-    setMessages(m => [...m, { id: `${ts}-${m.length}`, sender: 'me', text, ts }]);
-    setTyping(true);
-    setTimeout(() => setTyping(false), 2600 + Math.random() * 400);
-  }, [input]);
 
   const topPad = Platform.OS === 'web' ? 60 : insets.top;
 

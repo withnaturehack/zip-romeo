@@ -78,7 +78,7 @@
     "typescript": "~5.9.2"
   },
   "jest": {
-    "preset": "react-native",
+    "preset": "jest-expo",
     "setupFilesAfterEnv": [
       "@testing-library/jest-native/extend-expect"
     ],
@@ -86,7 +86,7 @@
       "^@/(.*)$": "<rootDir>/$1"
     },
     "transformIgnorePatterns": [
-      "node_modules/(?!((jest-)?react-native|@react-native(-community)?|react-native-url-polyfill|expo|expo-.*|@expo/.*|@supabase/.*)/)"
+      "node_modules/(?!(?:.pnpm/)?((jest-)?react-native|@react-native.*|react-native-url-polyfill|expo|expo-.*|@expo.*|@supabase.*)(?:@.+)?/)"
     ]
   },
   "private": true

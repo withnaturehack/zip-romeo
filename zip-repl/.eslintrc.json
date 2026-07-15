@@ -2,5 +2,10 @@
   "extends": "expo",
   "rules": {
     "react-hooks/exhaustive-deps": "warn"
-  }
+  },
+  "ignorePatterns": [
+    "scratch/**",
+    "dist/**",
+    "node_modules/**"
+  ]
 }

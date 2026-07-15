@@ -17,6 +17,8 @@
 // Web:    localStorage (fine for Expo Web / dev).
 
 import { Platform } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
+
 
 type Storage = {
   getItem:    (key: string) => Promise<string | null>;
@@ -46,7 +48,7 @@ function chunkKey(key: string, ver: string, i: number): string {
 
 // ─── Secure-store helpers ─────────────────────────────────────────────────────
 async function secureGet(key: string): Promise<string | null> {
-  const SecureStore = await import('expo-secure-store');
+
 
   const metaRaw = await SecureStore.getItemAsync(`${key}__meta`);
   if (metaRaw !== null) {
@@ -80,7 +82,7 @@ async function secureGet(key: string): Promise<string | null> {
 }
 
 async function secureSet(key: string, value: string): Promise<void> {
-  const SecureStore = await import('expo-secure-store');
+
 
   if (value.length <= CHUNK_SIZE) {
     // Read old meta BEFORE overwriting so we can clean up after.
@@ -137,7 +139,7 @@ async function secureSet(key: string, value: string): Promise<void> {
 }
 
 async function secureRemove(key: string): Promise<void> {
-  const SecureStore = await import('expo-secure-store');
+
 
   // Remove versioned chunks
   const metaRaw = await SecureStore.getItemAsync(`${key}__meta`)

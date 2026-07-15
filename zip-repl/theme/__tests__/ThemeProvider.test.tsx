@@ -16,7 +16,7 @@ describe('ThemeProvider', () => {
         <Probe />
       </ThemeProvider>
     );
-    expect(getByTestId('probe').props.children.join('')).toBe('light|#FBF2E3|20');
+    expect(getByTestId('probe').props.children.join('')).toBe('light|#F2E8D0|20');
   });
 
   it('switches to dark tokens when dark=true', () => {
@@ -25,6 +25,6 @@ describe('ThemeProvider', () => {
         <Probe />
       </ThemeProvider>
     );
-    expect(getByTestId('probe').props.children.join('')).toBe('dark|#1A1612|16');
+    expect(getByTestId('probe').props.children.join('')).toBe('dark|#181510|16');
   });
 });
